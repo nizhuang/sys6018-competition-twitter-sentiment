@@ -137,3 +137,69 @@ colnames(output) <- c("id","sentiment") # rename cols
 # write final output to file
 write.csv(output, file = "khg3je_submission1.csv", row.names = FALSE)
 
+
+# ------------------# 
+#        KNN        # 
+# ------------------# 
+euclideanDist <- function(a, b){
+     d = 0
+     for(i in c(1:(length(a)-1) ))
+       {
+           d = d + (a[[i]]-b[[i]])^2
+         }
+     d = sqrt(d)
+     return(d)
+   }
+####Resource: http://dataaspirant.com/2017/01/02/k-nearest-neighbor-classifier-implementation-r-scratch/
+knn_predict <- function(test_data, train_data, k_value){
+    pred <- c()  #empty pred vector 
+    #LOOP-1
+    for(i in c(1:nrow(test_data))){
+      #looping over each record of test data
+      eu_dist =c()          #eu_dist & eu_char empty  vector
+      eu_char = c()
+      five = 0              #1-5 sensitiment variable initialization with 0 value
+      four = 0
+      three = 0
+      two = 0
+      one = 0
+      #LOOP-2-looping over train data 
+    for(j in c(1:nrow(train_data))){
+      
+    #adding euclidean distance b/w test data point and train data to eu_dist vector
+      eu_dist <- c(eu_dist, euclideanDist(test_data[i,], train_data[j,]))
+    #adding class variable of training data in eu_char
+      eu_char <- c(eu_char, as.character(train_data[j,][[83]])) # column #83 contains sentiment scores
+        }
+     eu <- data.frame(eu_char, eu_dist) #eu dataframe created with eu_char & eu_dist columns
+     eu <- eu[order(eu$eu_dist),]       #sorting eu dataframe to gettop K neighbors
+     eu <- eu[1:k_value,]               #eu dataframe with top K neighbors
+    #Loop 3: loops over eu and counts classes of neibhors.
+    for(k in c(1:nrow(eu))){
+      if(as.character(eu[k,"eu_char"]) == "5"){
+         five = five + 1
+            }
+      if(as.character(eu[k,"eu_char"])=="4"){
+         four = four+1
+           }
+      if(as.character(eu[k,"eu_char"])=="3"){
+         three = three+1
+            }
+      if(as.character(eu[k,"eu_char"])=="2"){
+         two = two+1
+          }
+      else
+         one= one + 1
+          }
+      pred <- c(pred, max(c(five,four,three,two,one))) 
+           }
+     return(pred) #return pred vector
+}
+
+K = 5
+predictions <- knn_predict(vars_test_reduced, training_set_reduced, K) #calling knn_predict()
+predictions
+test = read.csv("test.csv")
+table = data.frame(test$id,predictions)
+write.table(table,file="knn_kaggle_3-4.csv",sep = ',', row.names = F,col.names = c('id','sentiment'))
+
