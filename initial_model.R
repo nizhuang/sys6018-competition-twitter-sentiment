@@ -115,8 +115,13 @@ vars_test_reduced <- vars_test %>%
 # more fixing names
 colnames(training_set_reduced)[40] <- "next_FIXED"
 colnames(vars_test_reduced)[40] <- "next_FIXED"
+
+training_set_reduced
   
-# make model
+
+
+# Random Forest (initial baseline model test…) ----------------------------
+# fit model
 library(randomForest)
 my_mod <- randomForest(as.factor(sentiment) ~ .,
                        data=training_set_reduced, 
@@ -138,9 +143,7 @@ colnames(output) <- c("id","sentiment") # rename cols
 write.csv(output, file = "khg3je_submission1.csv", row.names = FALSE)
 
 
-# ------------------# 
-#        KNN        # 
-# ------------------# 
+# KNN -------------------
 euclideanDist <- function(a, b){
      d = 0
      for(i in c(1:(length(a)-1) ))
@@ -202,4 +205,59 @@ predictions
 test = read.csv("test.csv")
 table = data.frame(test$id,predictions)
 write.table(table,file="knn_kaggle_3-4.csv",sep = ',', row.names = F,col.names = c('id','sentiment'))
+
+
+
+# KG KNN ------------------------------------------------------------------
+
+# load modes library
+library(modes)
+
+# declare KNN_predict function
+#
+# inputs: single test observation, all training observations, value for 'k'
+# outputs: predicted class for test_observation
+KNN_predict <- function(test_observation, training_data, k_value) {
+  
+  # declare calc_eulic function
+  #
+  # inputs: single training observation, single test_observation
+  # outputs: euclidean distance between two observations
+  calc_euclid <- function(training_observation, test_observation){
+    
+    sqrt(sum((training_observation - test_observation)^2))
+    
+  }
+  
+  # calculate all distances between single test observation and each training observation
+  distances <- apply(X = training_data[-83], MARGIN = 1, FUN = calc_euclid,
+                     test_observation=test_observation)
+  
+  distances_df <- as_tibble(cbind(distances, training_data["sentiment"]))
+  
+  k_nearest_classes <- distances_df %>%
+    arrange(distances) %>%
+    slice(1:k_value) %>%
+    pull(sentiment)
+  
+  # round median of mode(s) of k_nearest_classes
+  predicted_class <- round(median(unname(modes::modes(k_nearest_classes)[1,])))
+  
+}
+
+# calculate all class predictions for test_data
+preds <- apply(X = vars_test_reduced, MARGIN = 1, FUN = KNN_predict
+               , training_data = training_set_reduced, k_value = 10)
+
+
+
+
+# inputs: training data, test data, k-value
+# 
+# for all test points: 
+# 1. calculate distance from each training point
+# 2. select minimum 'k' points (nearest k points)
+# 3. calculate majority class of those nearest k points
+# 4. assign majority class to test point
+# outputs: predicted class values for all test data
 
