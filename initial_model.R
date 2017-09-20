@@ -249,9 +249,6 @@ KNN_predict <- function(test_observation, training_data, k_value) {
 preds <- apply(X = vars_test_reduced, MARGIN = 1, FUN = KNN_predict
                , training_data = training_set_reduced, k_value = 10)
 
-
-
-
 # inputs: training data, test data, k-value
 # 
 # for all test points: 
