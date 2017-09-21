@@ -1,6 +1,7 @@
 library(XML)
 library(class)
 library(tm)
+library(glmnet)
 setwd("~/Documents/sys6018-competition-twitter-sentiment-master")
 # read some news data from an XML file and transform it into a corpus. the following
 # data frame will have three columns:  id (document identifier), t (title), date (rough date)
@@ -53,7 +54,7 @@ test.clean = tm_map(test.clean, content_transformer(tolower))       # ignore cas
 test.clean = tm_map(test.clean, removeWords, stopwords("english"))  # remove stop words
 test.clean = tm_map(test.clean, stemDocument)                       # stem all words
 
-test.clean[[1]]$content
+test.clean[[1]]$content # test
 
 # recompute TF-IDF matrix
 test.clean.tfidf = DocumentTermMatrix(test.clean, control = list(weighting = weightTf(test)))
@@ -65,7 +66,7 @@ tfidf_99 = removeSparseTerms(test.clean.tfidf, 0.99)  # remove terms that are ab
 tfidf_99
 test.x = as.matrix(tfidf_99[,1:132])
 test.x
-
+data_test = as.data.frame(test.x)
 
 ################################################################################# 
 # Parametric Model
@@ -75,24 +76,64 @@ data_train = as.data.frame(data_train)
 attach(data_train)
 names(data_train)[127]<-paste("sentiment")
 
-data_train
+require("dplyr")
+library(tidyr)
+# remove variables from train-and-test that are not in both
+train_names <- names(data_train)
+test_names <- names(data_test)
+intersect_names <- intersect(train_names, test_names)
 
-model= glm(sentiment~., data = data_train)
+training_set_reduced <- data_train %>% 
+  select(one_of(intersect_names),
+         sentiment)
+
+vars_test_reduced <- data_test %>%
+  select(one_of(intersect_names))
+
+
+# model fit with all 82 variables 
+model= glm(sentiment~., data = training_set_reduced)
 summary(model)
+
+par_pred_model = predict(model, newdata = data_test, type="response")
+
+
+# refine the model 
+# select the best model 
+start<-glm(sentiment ~1,data= training_set_reduced)
+end<-glm(sentiment~.,data= training_set_reduced)
+result.s<-step(start, scope=list(upper=end), direction="both",trace=FALSE) 
+summary(result.s)
+anova(result.s)
+
+par_pred_resutl.s = predict(result.s, newdata = data_test, type="response")
+
 
 # Cross Validation 
 library(boot)
-cv.err=cv.glm(data_train, model)
-cv.err$delta
+# for model 
+cv.err=cv.glm(training_set_reduced, model)
+cv.err$delta  # 0.6184219 0.6183648
+# for result.s
+cv.err=cv.glm(training_set_reduced, result.s)
+cv.err$delta # 0.5658330 0.5658133
 
 
 
-data_test = as.data.frame(test.x)
-par_pred = predict(result.s, newdata = data_test, type="response")
+# multinom
+library(nnet)
+fit_multinom= multinom(sentiment~.,training_set_reduced)
+summary(fit_multinom)
+
+#data_test = data.matrix(data_test)
+par_pred = predict(fit_multinom,data_test, type="class")
+
+# need cross validation for multinom for model comparison 
 
 test = read.csv("test.csv")
 table = data.frame(test$id,ceiling(par_pred))
 write.table(table,file="par_kaggle_3-4.csv",sep = ',', row.names = F,col.names = c('id','sentiment'))
+
 
 
 
