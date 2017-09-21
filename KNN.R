@@ -1,14 +1,10 @@
 
-# Gerber_section ----------------------------------------------------------
-
-
-
 library(XML)
 library(tm)
 
 ##### Constructing TF-IDF Matrices #####
 
-# read some news data from an XML file and transform it into a corpus. the following
+# read some news data from file and transform it into a corpus. the following
 # data frame will have three columns:  id (document identifier), t (title), date (rough date)
 # and c (content).
 big_huge_func <- function(file_name) {
@@ -84,7 +80,7 @@ big_huge_func <- function(file_name) {
 
 
 
-# modeling_section 1 --------------------------------------------------------
+# Additional Data Prep ------
 
 library(tidyverse)
 
@@ -119,96 +115,7 @@ colnames(vars_test_reduced)[40] <- "next_FIXED"
 training_set_reduced
   
 
-
-# Random Forest (initial baseline model test…) ----------------------------
-# fit model
-library(randomForest)
-my_mod <- randomForest(as.factor(sentiment) ~ .,
-                       data=training_set_reduced, 
-                       importance=TRUE, 
-                       ntree=2000)
-my_mod
-
-# make predictions and write to file
-preds <- predict(my_mod, newdata = vars_test_reduced)
-preds
-
-id_vec <- 1:length(preds)
-
-# create tibble for output
-output <- as_tibble(cbind(id_vec, preds))
-colnames(output) <- c("id","sentiment") # rename cols
-
-# write final output to file
-write.csv(output, file = "khg3je_submission1.csv", row.names = FALSE)
-
-
-# KNN -------------------
-euclideanDist <- function(a, b){
-     d = 0
-     for(i in c(1:(length(a)-1) ))
-       {
-           d = d + (a[[i]]-b[[i]])^2
-         }
-     d = sqrt(d)
-     return(d)
-   }
-####Resource: http://dataaspirant.com/2017/01/02/k-nearest-neighbor-classifier-implementation-r-scratch/
-knn_predict <- function(test_data, train_data, k_value){
-    pred <- c()  #empty pred vector 
-    #LOOP-1
-    for(i in c(1:nrow(test_data))){
-      #looping over each record of test data
-      eu_dist =c()          #eu_dist & eu_char empty  vector
-      eu_char = c()
-      five = 0              #1-5 sensitiment variable initialization with 0 value
-      four = 0
-      three = 0
-      two = 0
-      one = 0
-      #LOOP-2-looping over train data 
-    for(j in c(1:nrow(train_data))){
-      
-    #adding euclidean distance b/w test data point and train data to eu_dist vector
-      eu_dist <- c(eu_dist, euclideanDist(test_data[i,], train_data[j,]))
-    #adding class variable of training data in eu_char
-      eu_char <- c(eu_char, as.character(train_data[j,][[83]])) # column #83 contains sentiment scores
-        }
-     eu <- data.frame(eu_char, eu_dist) #eu dataframe created with eu_char & eu_dist columns
-     eu <- eu[order(eu$eu_dist),]       #sorting eu dataframe to gettop K neighbors
-     eu <- eu[1:k_value,]               #eu dataframe with top K neighbors
-    #Loop 3: loops over eu and counts classes of neibhors.
-    for(k in c(1:nrow(eu))){
-      if(as.character(eu[k,"eu_char"]) == "5"){
-         five = five + 1
-            }
-      if(as.character(eu[k,"eu_char"])=="4"){
-         four = four+1
-           }
-      if(as.character(eu[k,"eu_char"])=="3"){
-         three = three+1
-            }
-      if(as.character(eu[k,"eu_char"])=="2"){
-         two = two+1
-          }
-      else
-         one= one + 1
-          }
-      pred <- c(pred, max(c(five,four,three,two,one))) 
-           }
-     return(pred) #return pred vector
-}
-
-K = 5
-predictions <- knn_predict(vars_test_reduced, training_set_reduced, K) #calling knn_predict()
-predictions
-test = read.csv("test.csv")
-table = data.frame(test$id,predictions)
-write.table(table,file="knn_kaggle_3-4.csv",sep = ',', row.names = F,col.names = c('id','sentiment'))
-
-
-
-# KG KNN ------------------------------------------------------------------
+# KNN ------------------------------------------------
 
 # load modes library
 library(modes)
@@ -247,14 +154,16 @@ KNN_predict <- function(test_observation, training_data, k_value) {
 
 # calculate all class predictions for test_data
 preds <- apply(X = vars_test_reduced, MARGIN = 1, FUN = KNN_predict
-               , training_data = training_set_reduced, k_value = 10)
+               , training_data = training_set_reduced, k_value = 5)
 
-# inputs: training data, test data, k-value
-# 
-# for all test points: 
-# 1. calculate distance from each training point
-# 2. select minimum 'k' points (nearest k points)
-# 3. calculate majority class of those nearest k points
-# 4. assign majority class to test point
-# outputs: predicted class values for all test data
+
+id_vec <- 1:length(preds)
+
+# create tibble for output
+output <- as_tibble(cbind(id_vec, preds))
+colnames(output) <- c("id","sentiment") # rename cols
+
+# write final output to file
+write.csv(output, file = "khg3je_KNN.csv", row.names = FALSE)
+
 
