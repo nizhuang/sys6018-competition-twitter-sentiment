@@ -154,7 +154,7 @@ KNN_predict <- function(test_observation, training_data, k_value) {
 
 # calculate all class predictions for test_data
 preds <- apply(X = vars_test_reduced, MARGIN = 1, FUN = KNN_predict
-               , training_data = training_set_reduced, k_value = 5)
+               , training_data = training_set_reduced, k_value = 500)
 
 
 id_vec <- 1:length(preds)
