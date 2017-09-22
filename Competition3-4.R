@@ -157,7 +157,7 @@ KNN_predict <- function(test_observation, training_data, k_value) {
 # calculate all class predictions for test_data
 preds <- apply(X = vars_test_reduced, MARGIN = 1, FUN = KNN_predict
                , training_data = training_set_reduced, k_value = 500)
-
+# **NOTE:** After cross-validating, it was determined that higher k-values yielded better out-of-sample performance.  We were unable to achieve KNN performance superior to the performance of simply predicting the majority class '3'.  At K-value of 500, the model always predicts the majority class.
 
 id_vec <- 1:length(preds)
 
